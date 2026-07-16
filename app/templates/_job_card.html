@@ -1,0 +1,73 @@
+{% set sc = score_class(job.ai_score) %}
+<article id="job-{{ job.id }}" data-job-card
+         class="group bg-panel border border-edge rounded-xl p-4 hover:border-accent/60 transition-colors">
+  <div class="flex items-start gap-3">
+    <!-- Clickable body opens the drawer -->
+    <div class="flex-1 cursor-pointer"
+         data-act="open"
+         hx-get="/jobs/{{ job.id }}/drawer"
+         hx-target="#drawer"
+         hx-swap="innerHTML"
+         onclick="openDrawer()">
+      <div class="flex items-center gap-2 flex-wrap mb-1">
+        <span class="badge badge-source">{{ SOURCE_LABELS.get(job.source, job.source) }}</span>
+        {% if job.status and job.status != "new" %}
+          <span class="badge badge-status status-{{ job.status }}">{{ job.status }}</span>
+        {% endif %}
+        {% if job.contact_emails %}
+          <span class="badge badge-email" title="{{ job.contact_emails|join(', ') }}">✉ {{ job.contact_emails|length }}</span>
+        {% endif %}
+        {% if job.posted_at %}
+          <span class="text-xs text-slate-500">{{ job.posted_at|relative_time }}</span>
+        {% endif %}
+      </div>
+      <h3 class="font-semibold text-white leading-snug">{{ job.title }}</h3>
+      <div class="text-sm text-slate-400 mt-0.5">
+        {{ job.company or "Unknown company" }}
+        {% if job.location %}<span class="text-slate-600"> · {{ job.location }}</span>{% endif %}
+        {% if job.budget %}<span class="text-emerald-400/90"> · {{ job.budget }}</span>{% endif %}
+      </div>
+      {% if job.tags %}
+      <div class="flex flex-wrap gap-1 mt-2">
+        {% for tag in job.tags[:8] %}
+          <span class="badge badge-tag">{{ tag }}</span>
+        {% endfor %}
+      </div>
+      {% endif %}
+      {% if job.match_hits %}
+      <div class="mt-2 text-[11px] text-emerald-300">
+        ✓ Matches your résumé: {{ job.match_hits|join(", ") }}
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Score badge -->
+    <div class="shrink-0">
+      <span class="score-badge score-{{ sc }}">
+        {{ job.ai_score if job.ai_score is not none else "—" }}
+      </span>
+    </div>
+  </div>
+
+  <!-- Card actions -->
+  <div class="flex items-center gap-2 mt-3 pt-3 border-t border-edge/70">
+    <button
+      data-act="shortlist"
+      hx-post="/jobs/{{ job.id }}/shortlist"
+      hx-target="#job-{{ job.id }}"
+      hx-swap="outerHTML"
+      class="btn-mini">★ Shortlist</button>
+    <button
+      data-act="ignore"
+      hx-post="/jobs/{{ job.id }}/ignore"
+      hx-target="#job-{{ job.id }}"
+      hx-swap="outerHTML"
+      class="btn-mini">✕ Ignore</button>
+    <button
+      data-act="apply"
+      hx-post="/jobs/{{ job.id }}/apply"
+      hx-target="#job-{{ job.id }}"
+      hx-swap="beforeend"
+      class="btn-mini btn-apply ml-auto">↗ Apply</button>
+  </div>
+</article>

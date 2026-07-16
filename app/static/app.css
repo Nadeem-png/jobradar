@@ -1,0 +1,86 @@
+/* JobRadar custom styles layered on top of Tailwind CDN. */
+
+.htmx-indicator { opacity: 0; }
+.htmx-request .htmx-indicator,
+.htmx-request.htmx-indicator { opacity: 1; }
+
+/* --- Badges ------------------------------------------------------------ */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 11px;
+  line-height: 1;
+  padding: 3px 7px;
+  border-radius: 6px;
+  border: 1px solid #26303f;
+  white-space: nowrap;
+}
+.badge-source { color: #9db6d6; background: #1b2431; }
+.badge-tag    { color: #8fa3bd; background: #141a24; }
+.badge-status { text-transform: capitalize; }
+.badge-email  { color: #6ee7b7; background: #064e3b; border-color: #10b981; }
+
+/* Status colors (shared by badges + kanban dots) */
+.status-new         { color: #93c5fd; }
+.status-shortlisted { color: #fcd34d; }
+.status-applied     { color: #67e8f9; }
+.status-replied     { color: #c4b5fd; }
+.status-interview   { color: #f9a8d4; }
+.status-won         { color: #6ee7b7; }
+.status-lost        { color: #fca5a5; }
+.status-ignored     { color: #94a3b8; }
+
+.status-dot::before {
+  content: "";
+  display: inline-block;
+  width: 8px; height: 8px;
+  border-radius: 9999px;
+  margin-right: 6px;
+  background: currentColor;
+  vertical-align: middle;
+}
+
+/* --- Score badge ------------------------------------------------------- */
+.score-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 34px;
+  height: 34px;
+  padding: 0 8px;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 14px;
+}
+.score-high     { background: #064e3b; color: #6ee7b7; border: 1px solid #10b981; }
+.score-mid      { background: #422006; color: #fcd34d; border: 1px solid #d97706; }
+.score-low      { background: #1b2431; color: #94a3b8; border: 1px solid #334155; }
+.score-unscored { background: transparent; color: #64748b; border: 1px dashed #475569; }
+
+/* --- Mini buttons ------------------------------------------------------ */
+.btn-mini {
+  font-size: 12px;
+  padding: 5px 10px;
+  border-radius: 6px;
+  border: 1px solid #26303f;
+  color: #cbd5e1;
+  background: #141a24;
+  transition: background .15s, border-color .15s;
+}
+.btn-mini:hover { background: #1b2431; border-color: #4f9cf9; }
+.btn-apply { color: #fff; background: #4f9cf9; border-color: #4f9cf9; }
+.btn-apply:hover { background: #3b82f6; }
+
+/* --- Kanban ------------------------------------------------------------ */
+.kanban-ghost { opacity: .4; }
+.kanban-card { cursor: grab; }
+.kanban-card:active { cursor: grabbing; }
+
+.save-hint { color: #6ee7b7; }
+
+/* --- Keyboard-selected feed card --- */
+.kb-selected {
+  outline: 2px solid #4f9cf9;
+  outline-offset: 2px;
+  border-color: #4f9cf9 !important;
+}

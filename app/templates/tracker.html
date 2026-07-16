@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block nav_tracker %}bg-panel2 text-white{% endblock %}
+{% block title %}Tracker · JobRadar{% endblock %}
+
+{% block content %}
+<div class="flex items-center justify-between mb-4">
+  <h1 class="text-xl font-bold text-white">Application tracker</h1>
+  <div class="flex items-center gap-3">
+    <p class="text-sm text-slate-500 hidden md:block">Drag a card between columns, or use its status menu.</p>
+    <a href="/export.csv" class="text-sm px-3 py-1.5 rounded border border-edge hover:bg-panel2 text-slate-200">↓ Export CSV</a>
+  </div>
+</div>
+{% include "_tracker_board.html" %}
+{% endblock %}

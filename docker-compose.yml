@@ -1,0 +1,13 @@
+services:
+  jobradar:
+    build: .
+    image: jobradar:latest
+    container_name: jobradar
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    volumes:
+      # Persist the SQLite database (JOBRADAR_DB_PATH=/data/jobradar.db in the image).
+      - ./data:/data

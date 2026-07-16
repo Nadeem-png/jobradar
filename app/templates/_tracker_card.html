@@ -1,0 +1,23 @@
+<div class="kanban-card bg-panel2 border border-edge rounded-lg p-3" data-job-id="{{ job.id }}">
+  <a href="{{ job.url|safe_url }}" target="_blank" rel="noopener"
+     class="block font-medium text-sm text-white leading-snug hover:text-accent">{{ job.title }}</a>
+  <div class="text-xs text-slate-400 mt-0.5">{{ job.company or "Unknown company" }}</div>
+  <div class="flex items-center gap-2 mt-2">
+    <span class="badge badge-source">{{ SOURCE_LABELS.get(job.source, job.source) }}</span>
+    {% if job.ai_score is not none %}
+      <span class="score-badge score-{{ score_class(job.ai_score) }} !text-[10px] !px-1.5 !py-0.5">{{ job.ai_score }}</span>
+    {% endif %}
+    {% if job.applied_at %}<span class="text-[11px] text-slate-500">{{ job.applied_at|relative_time }}</span>{% endif %}
+  </div>
+  <select
+    class="mt-2 w-full text-xs bg-panel border border-edge rounded px-2 py-1 focus:outline-none focus:border-accent"
+    hx-post="/jobs/{{ job.id }}/move"
+    hx-target="#tracker-board"
+    hx-swap="outerHTML"
+    name="status"
+    hx-trigger="change">
+    {% for st in TRACKER_COLUMNS %}
+      <option value="{{ st }}" {% if st == job.status %}selected{% endif %}>move to → {{ st }}</option>
+    {% endfor %}
+  </select>
+</div>

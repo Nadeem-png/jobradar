@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+{% block nav_stats %}bg-panel2 text-white{% endblock %}
+{% block title %}Stats · JobRadar{% endblock %}
+
+{% block content %}
+<div class="flex items-center justify-between mb-5">
+  <h1 class="text-xl font-bold text-white">Stats</h1>
+  <a href="/export.csv"
+     class="text-sm px-3 py-1.5 rounded border border-edge hover:bg-panel2 text-slate-200">↓ Export tracker CSV</a>
+</div>
+
+<!-- KPI tiles -->
+<div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
+  {% set tile = [
+    ("Total jobs", tiles.total_jobs, ""),
+    ("Scored", tiles.scored_jobs, ""),
+    ("High fit (" ~ tiles.threshold ~ "+)", tiles.high_fit, ""),
+    ("Applied", tiles.applied, ""),
+    ("Reply rate", tiles.reply_rate ~ "%", "of applied"),
+    ("Interview rate", tiles.interview_rate ~ "%", "of applied"),
+  ] %}
+  {% for label, value, sub in tile %}
+  <div class="bg-panel border border-edge rounded-xl p-4">
+    <div class="text-2xl font-bold text-white tabular-nums">{{ value }}</div>
+    <div class="text-xs text-slate-400 mt-1">{{ label }}</div>
+    {% if sub %}<div class="text-[10px] text-slate-600">{{ sub }}</div>{% endif %}
+  </div>
+  {% endfor %}
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+  <div class="bg-panel border border-edge rounded-xl p-4">
+    <h2 class="text-sm font-semibold text-white mb-3">Jobs per source · last 14 days</h2>
+    <div class="relative" style="height:320px"><canvas id="sourceChart"></canvas></div>
+  </div>
+  <div class="bg-panel border border-edge rounded-xl p-4">
+    <h2 class="text-sm font-semibold text-white mb-1">Applications per week · last 8 weeks</h2>
+    <p class="text-[11px] text-slate-500 mb-3">Reply rate {{ tiles.reply_rate }}% · interview rate {{ tiles.interview_rate }}% (of {{ tiles.applied }} applications)</p>
+    <div class="relative" style="height:320px"><canvas id="weekChart"></canvas></div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+  (function () {
+    if (!window.Chart) return;
+    const SURFACE = "#141a24", INK = "#c3c2b7", GRID = "#2c2c2a";
+    Chart.defaults.color = INK;
+    Chart.defaults.borderColor = GRID;
+    Chart.defaults.font.family = 'system-ui, -apple-system, "Segoe UI", sans-serif';
+
+    const dayLabels = {{ day_labels|tojson }};
+    const sourceData = {{ source_datasets|tojson }};
+    const weekLabels = {{ week_labels|tojson }};
+    const weekCounts = {{ week_counts|tojson }};
+
+    // Stacked bar: jobs per source per day. 2px surface gap between segments
+    // (borderColor = surface) is the secondary encoding alongside the legend.
+    new Chart(document.getElementById("sourceChart"), {
+      type: "bar",
+      data: {
+        labels: dayLabels,
+        datasets: sourceData.map(function (s) {
+          return {
+            label: s.label,
+            data: s.data,
+            backgroundColor: s.color,
+            borderColor: SURFACE,
+            borderWidth: 2,
+            borderSkipped: false,
+          };
+        }),
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        interaction: { mode: "index", intersect: false },
+        plugins: {
+          legend: { position: "bottom", labels: { boxWidth: 12, boxHeight: 12, padding: 12 } },
+          tooltip: { backgroundColor: "#0b0f17", borderColor: GRID, borderWidth: 1 },
+        },
+        scales: {
+          x: { stacked: true, grid: { display: false }, ticks: { maxRotation: 0, autoSkip: true } },
+          y: { stacked: true, beginAtZero: true, ticks: { precision: 0 }, grid: { color: GRID } },
+        },
+      },
+    });
+
+    // Single-series weekly applications (no legend needed — the title names it).
+    new Chart(document.getElementById("weekChart"), {
+      type: "bar",
+      data: {
+        labels: weekLabels,
+        datasets: [{
+          label: "Applications",
+          data: weekCounts,
+          backgroundColor: "#3987e5",
+          borderRadius: 4,
+          borderSkipped: "bottom",
+        }],
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: { backgroundColor: "#0b0f17", borderColor: GRID, borderWidth: 1 },
+        },
+        scales: {
+          x: { grid: { display: false } },
+          y: { beginAtZero: true, ticks: { precision: 0 }, grid: { color: GRID } },
+        },
+      },
+    });
+  })();
+</script>
+{% endblock %}

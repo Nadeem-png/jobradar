@@ -1,0 +1,158 @@
+{% extends "base.html" %}
+{% block nav_feed %}{% if not freelance %}bg-panel2 text-white{% endif %}{% endblock %}
+{% block nav_freelancing %}{% if freelance %}bg-panel2 text-white{% endif %}{% endblock %}
+{% block title %}{{ "Freelancing" if freelance else "Feed" }} · JobRadar{% endblock %}
+
+{% block content %}
+{% if freelance %}
+<div class="mb-4">
+  <h1 class="text-xl font-bold text-white">Freelance &amp; contract jobs</h1>
+  <p class="text-sm text-slate-500">Upwork plus any listing that reads as freelance / contract / hourly / part-time.</p>
+</div>
+{% endif %}
+<div class="grid grid-cols-1 lg:grid-cols-[260px_1fr] gap-6">
+
+  <!-- Sidebar filters -->
+  <aside class="lg:sticky lg:top-20 self-start">
+    <form
+      id="filters"
+      hx-get="/jobs-partial"
+      hx-target="#job-list"
+      hx-swap="innerHTML"
+      hx-trigger="change, keyup delay:300ms from:input[type=search]"
+      class="bg-panel border border-edge rounded-xl p-4 space-y-5 text-sm">
+
+      {% if freelance %}<input type="hidden" name="freelance" value="1" />{% endif %}
+      {# Marker: tells the server this request came from the filter form, so zero
+         checked sources means "show none" rather than "no source filter". #}
+      <input type="hidden" name="flt" value="1" />
+
+      <div>
+        <label class="block text-xs uppercase tracking-wide text-slate-400 mb-2">Search</label>
+        <input type="search" name="q" placeholder="e.g. laravel, python, react…"
+               class="w-full bg-panel2 border border-edge rounded px-3 py-2 focus:outline-none focus:border-accent" />
+        <p class="text-[11px] text-slate-500 mt-1">Whole-word match in title, tags, company &amp; description — best matches first. Use "quotes" for an exact phrase.</p>
+      </div>
+
+      <div>
+        <label class="block text-xs uppercase tracking-wide text-slate-400 mb-2">Sources</label>
+        <div class="space-y-1.5">
+          {% for s in sources %}
+          <label class="flex items-center gap-2 cursor-pointer">
+            <input type="checkbox" name="source" value="{{ s }}" checked
+                   class="accent-accent" />
+            <span>{{ SOURCE_LABELS.get(s, s) }}</span>
+          </label>
+          {% endfor %}
+        </div>
+      </div>
+
+      <div>
+        <label class="block text-xs uppercase tracking-wide text-slate-400 mb-2">Country / Region</label>
+        <select name="country" class="w-full bg-panel2 border border-edge rounded px-3 py-2 focus:outline-none focus:border-accent">
+          <option value="" selected>Any</option>
+          {% for key, spec in COUNTRY_FILTERS.items() %}
+          <option value="{{ key }}">{{ spec.label }}</option>
+          {% endfor %}
+        </select>
+        <p class="text-[11px] text-slate-500 mt-1">Matched from the listing's location/title.</p>
+      </div>
+
+      <div>
+        <label class="block text-xs uppercase tracking-wide text-slate-400 mb-2">Date posted</label>
+        <p class="text-[11px] text-slate-500 mb-1.5">Show jobs posted within the last</p>
+        <div class="flex flex-wrap gap-1.5">
+          {% for val, lbl in POSTED_WITHIN_OPTIONS %}
+          <label class="cursor-pointer">
+            <input type="radio" name="posted_within" value="{{ val }}" class="peer hidden"
+                   {% if val == "" %}checked{% endif %} />
+            <span class="inline-block px-2.5 py-1 rounded border border-edge text-xs text-slate-300
+                         hover:bg-panel2 peer-checked:bg-emerald-900/60 peer-checked:text-emerald-200
+                         peer-checked:border-emerald-500">{{ lbl }}</span>
+          </label>
+          {% endfor %}
+        </div>
+      </div>
+
+      <div>
+        <label class="block text-xs uppercase tracking-wide text-slate-400 mb-2">Employment type</label>
+        <div class="flex flex-wrap gap-1.5">
+          {% for key, spec in EMPLOYMENT_TYPES.items() %}
+          <label class="cursor-pointer">
+            <input type="checkbox" name="etype" value="{{ key }}" class="peer hidden" />
+            <span class="inline-block px-2.5 py-1 rounded border border-edge text-xs text-slate-300
+                         hover:bg-panel2 peer-checked:bg-accent peer-checked:text-white
+                         peer-checked:border-accent">{{ spec.label }}</span>
+          </label>
+          {% endfor %}
+        </div>
+        <p class="text-[11px] text-slate-500 mt-1">Pick several — jobs matching any are shown.</p>
+      </div>
+
+      <div>
+        <label class="block text-xs uppercase tracking-wide text-slate-400 mb-2">Experience level</label>
+        <div class="flex flex-wrap gap-1.5">
+          {% for key, spec in EXPERIENCE_LEVELS.items() %}
+          <label class="cursor-pointer">
+            <input type="checkbox" name="explevel" value="{{ key }}" class="peer hidden" />
+            <span class="inline-block px-2.5 py-1 rounded border border-edge text-xs text-slate-300
+                         hover:bg-panel2 peer-checked:bg-accent peer-checked:text-white
+                         peer-checked:border-accent">{{ spec.label }}</span>
+          </label>
+          {% endfor %}
+        </div>
+      </div>
+
+      <div>
+        <label class="block text-xs uppercase tracking-wide text-slate-400 mb-2">
+          Years of experience: <span id="max-years-val">Any</span>
+        </label>
+        <input type="range" name="max_years" min="0" max="11" value="11" step="1"
+               class="w-full accent-accent"
+               oninput="document.getElementById('max-years-val').textContent = this.value === '11' ? 'Any' : ('≤ ' + this.value + ' yrs')" />
+        <p class="text-[11px] text-slate-500 mt-1">Hides jobs demanding more years than you have.</p>
+      </div>
+
+      <div>
+        <label class="block text-xs uppercase tracking-wide text-slate-400 mb-2">Status</label>
+        <select name="status" class="w-full bg-panel2 border border-edge rounded px-3 py-2 focus:outline-none focus:border-accent">
+          <option value="active" selected>Active (not ignored)</option>
+          <option value="all">All</option>
+          {% for st in STATUSES %}
+          <option value="{{ st }}">{{ st|capitalize }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div>
+        <label class="block text-xs uppercase tracking-wide text-slate-400 mb-2">
+          Min AI score: <span id="min-score-val">0</span>
+        </label>
+        <input type="range" name="min_score" min="0" max="10" value="0" step="1"
+               class="w-full accent-accent"
+               oninput="document.getElementById('min-score-val').textContent = this.value" />
+        <p class="text-[11px] text-slate-500 mt-1">Filters to scored jobs ≥ this value.</p>
+      </div>
+
+      <button type="button" onclick="resetFilters()"
+              class="w-full text-xs px-3 py-2 rounded border border-edge hover:bg-panel2">
+        Reset filters
+      </button>
+    </form>
+  </aside>
+
+  <!-- Job list -->
+  <section>
+    {% set ai = ai_status() %}
+    {% if not ai.key_present %}
+    <div class="mb-4 text-sm bg-amber-950/40 border border-amber-700/50 text-amber-200 rounded-lg px-3 py-2">
+      AI scoring is off — set <code class="text-amber-100">OPENAI_API_KEY</code> in your
+      <code class="text-amber-100">.env</code> to score jobs and draft proposals. Jobs still fetch and show unscored.
+    </div>
+    {% endif %}
+    <div id="job-list">
+      {% include "_jobs.html" %}
+    </div>
+  </section>
+</div>
+{% endblock %}

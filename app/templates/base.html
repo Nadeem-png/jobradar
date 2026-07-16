@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{% block title %}JobRadar{% endblock %}</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
+  <script>
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            ink: "#0b0f17",
+            panel: "#141a24",
+            panel2: "#1b2431",
+            edge: "#26303f",
+            accent: "#4f9cf9",
+          },
+        },
+      },
+    };
+  </script>
+  <link rel="stylesheet" href="/static/app.css" />
+</head>
+<body class="bg-ink text-slate-200 min-h-screen antialiased">
+  <header class="border-b border-edge bg-panel/80 backdrop-blur sticky top-0 z-30">
+    <div class="max-w-[1400px] mx-auto px-4 h-14 flex items-center gap-6">
+      <a href="/" class="font-bold text-lg tracking-tight text-white">
+        Job<span class="text-accent">Radar</span>
+      </a>
+      <nav class="flex items-center gap-1 text-sm">
+        <a href="/" class="px-3 py-1.5 rounded hover:bg-panel2 {% block nav_feed %}{% endblock %}">Feed</a>
+        <a href="/freelancing" class="px-3 py-1.5 rounded hover:bg-panel2 {% block nav_freelancing %}{% endblock %}">Freelancing</a>
+        <a href="/resume" class="px-3 py-1.5 rounded hover:bg-panel2 {% block nav_resume %}{% endblock %}">Resume</a>
+        <a href="/tracker" class="px-3 py-1.5 rounded hover:bg-panel2 {% block nav_tracker %}{% endblock %}">Tracker</a>
+        <a href="/stats" class="px-3 py-1.5 rounded hover:bg-panel2 {% block nav_stats %}{% endblock %}">Stats</a>
+        <a href="/settings" class="px-3 py-1.5 rounded hover:bg-panel2 {% block nav_settings %}{% endblock %}">Settings</a>
+      </nav>
+      <div class="ml-auto flex items-center gap-2">
+        <button
+          hx-get="/jobs/new"
+          hx-target="#drawer"
+          hx-swap="innerHTML"
+          onclick="openDrawer()"
+          class="text-sm px-3 py-1.5 rounded border border-edge hover:bg-panel2 text-slate-200 font-medium">
+          + Add job
+        </button>
+        <button
+          hx-post="/fetch-now"
+          hx-swap="none"
+          hx-indicator="#fetch-spin"
+          class="text-sm px-3 py-1.5 rounded bg-accent/90 hover:bg-accent text-white font-medium">
+          <span id="fetch-spin" class="htmx-indicator inline-block animate-spin">⟳</span>
+          Fetch now
+        </button>
+        {% if auth_enabled() %}
+        <form method="post" action="/logout" class="m-0">
+          <button type="submit" title="Sign out"
+                  class="text-sm px-3 py-1.5 rounded border border-edge hover:bg-panel2 text-slate-400">
+            Logout
+          </button>
+        </form>
+        {% endif %}
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-[1400px] mx-auto px-4 py-5">
+    {% block content %}{% endblock %}
+  </main>
+
+  <!-- Right-side detail drawer -->
+  <div id="drawer-backdrop" class="hidden fixed inset-0 bg-black/50 z-40" onclick="closeDrawer()"></div>
+  <aside id="drawer" class="drawer fixed top-0 right-0 h-full w-full max-w-xl bg-panel border-l border-edge z-50 translate-x-full transition-transform duration-200 overflow-y-auto"></aside>
+
+  <!-- Toast -->
+  <div id="toast" class="hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-[60] px-4 py-2 rounded-lg bg-panel2 border border-edge text-sm shadow-lg"></div>
+
+  <script src="/static/app.js"></script>
+  <script src="/static/keyboard.js"></script>
+</body>
+</html>

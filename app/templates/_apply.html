@@ -1,0 +1,16 @@
+<span class="text-emerald-400">Applied ✓ — opening job in a new tab.</span>
+<script>
+  (function () {
+    var text = {{ (job.ai_proposal or "")|tojson }};
+    var url = {{ (job.url|safe_url)|tojson }};
+    if (text && navigator.clipboard) {
+      navigator.clipboard.writeText(text).catch(function () {});
+    }
+    if (url) { window.open(url, "_blank", "noopener"); }
+    if (window.showToast) {
+      window.showToast(text
+        ? "Proposal copied — paste it on the job page."
+        : "Job opened — add your proposal, then paste it there.");
+    }
+  })();
+</script>

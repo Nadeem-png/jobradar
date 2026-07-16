@@ -1,0 +1,24 @@
+# Secrets & local DB
+.env
+jobradar.db
+jobradar.db-journal
+jobradar.db-wal
+jobradar.db-shm
+
+# Docker DB volume
+data/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+.pytest_cache/
+
+# Editor / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Sign in · JobRadar</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            ink: "#0b0f17",
+            panel: "#141a24",
+            panel2: "#1b2431",
+            edge: "#26303f",
+            accent: "#4f9cf9",
+          },
+        },
+      },
+    };
+  </script>
+</head>
+<body class="bg-ink text-slate-200 min-h-screen antialiased flex items-center justify-center px-4">
+  <div class="w-full max-w-sm">
+    <div class="text-center mb-6">
+      <span class="font-bold text-2xl tracking-tight text-white">Job<span class="text-accent">Radar</span></span>
+      <p class="text-sm text-slate-500 mt-2">Enter the access key to continue.</p>
+    </div>
+
+    <form method="post" action="/login"
+          class="bg-panel border border-edge rounded-xl p-6 space-y-4">
+      <input type="hidden" name="next" value="{{ next }}" />
+      <div>
+        <label class="block text-xs uppercase tracking-wide text-slate-400 mb-2">Access key</label>
+        <input type="password" name="key" autofocus autocomplete="current-password"
+               placeholder="access key…"
+               class="w-full bg-panel2 border border-edge rounded px-3 py-2.5 focus:outline-none focus:border-accent" />
+      </div>
+      {% if error %}
+      <p class="text-sm text-red-400">{{ error }}</p>
+      {% endif %}
+      <button type="submit"
+              class="w-full py-2.5 rounded bg-accent/90 hover:bg-accent text-white font-medium">
+        Unlock
+      </button>
+    </form>
+
+    <p class="text-[11px] text-slate-600 text-center mt-4">
+      The key is set in the server's .env (JOBRADAR_ACCESS_KEY).
+    </p>
+  </div>
+</body>
+</html>

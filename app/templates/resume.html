@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+{% block nav_resume %}bg-panel2 text-white{% endblock %}
+{% block title %}Resume · JobRadar{% endblock %}
+
+{% block content %}
+<div class="max-w-[1100px] mx-auto">
+  <h1 class="text-xl font-bold text-white mb-1">Resume match</h1>
+  <p class="text-sm text-slate-500 mb-5">Upload your résumé — JobRadar extracts your skills and shows only the jobs that match them.</p>
+
+  {% if error %}
+  <div class="mb-4 text-sm bg-red-950/40 border border-red-800/50 text-red-200 rounded-lg px-3 py-2">{{ error }}</div>
+  {% endif %}
+
+  {% set ai = ai_status() %}
+
+  <!-- Upload panel -->
+  <div class="bg-panel border border-edge rounded-xl p-4 mb-6">
+    <form method="post" action="/resume/upload" enctype="multipart/form-data"
+          class="flex flex-wrap items-center gap-3">
+      <input type="file" name="file" accept=".pdf,.docx,.txt,.md" required
+             class="text-sm text-slate-300 file:mr-3 file:px-3 file:py-1.5 file:rounded file:border-0 file:bg-accent file:text-white file:cursor-pointer" />
+      <button type="submit" class="text-sm px-4 py-2 rounded bg-accent hover:bg-blue-500 text-white font-medium">
+        {{ "Replace résumé" if has_resume else "Upload & match" }}
+      </button>
+      <span class="text-[11px] text-slate-500">PDF, .docx, or .txt · max 5 MB</span>
+    </form>
+    {% if not ai.key_present %}
+    <p class="text-[11px] text-amber-300/80 mt-2">No <code>OPENAI_API_KEY</code> set — skills are extracted with a keyword matcher. Add a key for smarter extraction.</p>
+    {% endif %}
+  </div>
+
+  {% if has_resume %}
+  <div class="bg-panel border border-edge rounded-xl p-4 mb-6">
+    <div class="flex items-start justify-between gap-3 flex-wrap">
+      <div>
+        <div class="text-white font-semibold">📄 {{ settings.resume_filename }}</div>
+        <div class="text-xs text-slate-500 mt-0.5">
+          {% if settings.resume_seniority %}{{ settings.resume_seniority|capitalize }} · {% endif %}
+          {{ settings.resume_skills|length }} skills detected
+          {% if settings.resume_uploaded_at %} · uploaded {{ settings.resume_uploaded_at[:10] }}{% endif %}
+        </div>
+      </div>
+      <div class="flex items-center gap-2">
+        <form method="post" action="/resume/use-profile">
+          <button type="submit" class="text-xs px-3 py-1.5 rounded border border-edge hover:bg-panel2"
+                  title="Set the AI scoring profile from this résumé">Use for AI scoring</button>
+        </form>
+        <form method="post" action="/resume/clear"
+              onsubmit="return confirm('Remove the uploaded résumé?')">
+          <button type="submit" class="text-xs px-3 py-1.5 rounded border border-edge hover:bg-panel2 text-slate-400">Clear</button>
+        </form>
+      </div>
+    </div>
+
+    {% if settings.resume_summary %}
+    <p class="text-sm text-slate-300 mt-3">{{ settings.resume_summary }}</p>
+    {% endif %}
+
+    {% if settings.resume_skills %}
+    <div class="flex flex-wrap gap-1.5 mt-3">
+      {% for s in settings.resume_skills %}<span class="badge badge-tag">{{ s }}</span>{% endfor %}
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Matching jobs -->
+  <h2 class="text-sm font-semibold text-white mb-3">
+    {{ total }} matching job{{ "s" if total != 1 }}
+    <span class="text-slate-500 font-normal">— ranked by how many of your skills they hit · page {{ page }} of {{ pages }}</span>
+  </h2>
+  {% if jobs %}
+  <div class="space-y-3">
+    {% for job in jobs %}
+      {% include "_job_card.html" %}
+    {% endfor %}
+  </div>
+  {% if pages > 1 %}
+  <div class="flex items-center justify-between mt-5">
+    {% if page > 1 %}
+    <a href="/resume?page={{ page - 1 }}" class="btn-mini">← Prev</a>
+    {% else %}<span class="btn-mini opacity-40 pointer-events-none">← Prev</span>{% endif %}
+    <span class="text-xs text-slate-500">Page {{ page }} / {{ pages }}</span>
+    {% if page < pages %}
+    <a href="/resume?page={{ page + 1 }}" class="btn-mini">Next →</a>
+    {% else %}<span class="btn-mini opacity-40 pointer-events-none">Next →</span>{% endif %}
+  </div>
+  {% endif %}
+  {% else %}
+  <div class="text-center py-16 text-slate-500 border border-dashed border-edge rounded-xl">
+    <p>No current jobs match your résumé skills yet.</p>
+    <p class="text-sm mt-1">Try <a href="/" class="text-accent hover:underline">Fetch now</a> on the feed, or upload a fuller résumé.</p>
+  </div>
+  {% endif %}
+
+  {% else %}
+  <div class="text-center py-16 text-slate-500 border border-dashed border-edge rounded-xl">
+    <p class="text-lg mb-1">No résumé uploaded yet.</p>
+    <p class="text-sm">Upload one above to see jobs matched to your skills and experience.</p>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

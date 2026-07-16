@@ -1,0 +1,30 @@
+{% if total == 0 %}
+<div class="text-center py-20 text-slate-500 border border-dashed border-edge rounded-xl">
+  <p class="text-lg mb-1">No jobs match.</p>
+  <p class="text-sm">Try “Fetch now”, loosen your filters, or wait for the next 10-minute cycle.</p>
+</div>
+{% else %}
+<div class="mb-3 text-xs text-slate-500">
+  {{ total }} job{{ "s" if total != 1 }} · page {{ page }} of {{ pages }}
+</div>
+
+<div class="space-y-3">
+  {% for job in jobs %}
+    {% include "_job_card.html" %}
+  {% endfor %}
+</div>
+
+{% if pages > 1 %}
+<div class="flex items-center justify-between mt-5">
+  <button class="btn-mini {{ 'opacity-40 pointer-events-none' if page <= 1 }}"
+          {% if page <= 1 %}disabled{% endif %}
+          hx-get="/jobs-partial" hx-target="#job-list" hx-swap="innerHTML"
+          hx-include="#filters" hx-vals='{"page": {{ page - 1 }}}'>← Prev</button>
+  <span class="text-xs text-slate-500">Page {{ page }} / {{ pages }}</span>
+  <button class="btn-mini {{ 'opacity-40 pointer-events-none' if page >= pages }}"
+          {% if page >= pages %}disabled{% endif %}
+          hx-get="/jobs-partial" hx-target="#job-list" hx-swap="innerHTML"
+          hx-include="#filters" hx-vals='{"page": {{ page + 1 }}}'>Next →</button>
+</div>
+{% endif %}
+{% endif %}

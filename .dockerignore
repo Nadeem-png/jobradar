@@ -1,0 +1,15 @@
+.venv/
+venv/
+env/
+__pycache__/
+*.py[cod]
+.env
+jobradar.db
+jobradar.db-*
+data/
+.git/
+.gitignore
+.idea/
+.vscode/
+*.md
+SPEC_PYTHON.md

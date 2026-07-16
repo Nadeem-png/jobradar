@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+{% block nav_settings %}bg-panel2 text-white{% endblock %}
+{% block title %}Settings · JobRadar{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto">
+  <h1 class="text-xl font-bold text-white mb-1">Settings</h1>
+  <p class="text-sm text-slate-500 mb-5">Changes take effect on the next fetch cycle (or click “Fetch now”).</p>
+
+  {% if saved %}
+  <div class="mb-4 text-sm bg-emerald-950/40 border border-emerald-700/50 text-emerald-200 rounded-lg px-3 py-2">
+    Settings saved.
+  </div>
+  {% endif %}
+
+  {% set ai = ai_status() %}
+  <div class="mb-5 text-sm rounded-lg px-3 py-2 border
+    {% if ai.key_present %}bg-emerald-950/30 border-emerald-800/50 text-emerald-200{% else %}bg-amber-950/40 border-amber-700/50 text-amber-200{% endif %}">
+    {% if ai.key_present %}
+      AI scoring is <strong>on</strong> — model <code>{{ ai.model }}</code>. Set <code>OPENAI_MODEL</code> in .env to change it.
+    {% else %}
+      AI scoring is <strong>off</strong> — set <code>OPENAI_API_KEY</code> in your <code>.env</code> file to enable scoring &amp; proposals.
+    {% endif %}
+  </div>
+
+  <form method="post" action="/settings" class="space-y-6">
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div>
+        <label class="block text-xs uppercase tracking-wide text-slate-400 mb-2">Keywords</label>
+        <p class="text-[11px] text-slate-500 mb-1">One per line (or comma-separated). A job must match ≥1 to be kept.</p>
+        <textarea name="keywords" rows="10"
+          class="w-full bg-panel2 border border-edge rounded px-3 py-2 text-sm font-mono focus:outline-none focus:border-accent">{{ settings.keywords|join("\n") }}</textarea>
+      </div>
+
+      <div>
+        <label class="block text-xs uppercase tracking-wide text-slate-400 mb-2">Blocked keywords</label>
+        <p class="text-[11px] text-slate-500 mb-1">One per line. A job matching any of these is discarded.</p>
+        <textarea name="blocked_keywords" rows="10"
+          class="w-full bg-panel2 border border-edge rounded px-3 py-2 text-sm font-mono focus:outline-none focus:border-accent">{{ settings.blocked_keywords|join("\n") }}</textarea>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div>
+        <label class="block text-xs uppercase tracking-wide text-slate-400 mb-2">Minimum AI score</label>
+        <p class="text-[11px] text-slate-500 mb-1">Jobs scored below this collapse into the “Low match” section (0–10).</p>
+        <input type="number" name="min_score" min="0" max="10" step="1" value="{{ settings.min_score }}"
+          class="w-28 bg-panel2 border border-edge rounded px-3 py-2 text-sm focus:outline-none focus:border-accent" />
+      </div>
+
+      <div>
+        <label class="block text-xs uppercase tracking-wide text-slate-400 mb-2">Sources</label>
+        <div class="space-y-1.5">
+          {% for s in FETCH_SOURCES %}
+          <label class="flex items-center gap-2 cursor-pointer text-sm">
+            <input type="checkbox" name="sources_enabled" value="{{ s }}"
+                   {% if settings.sources_enabled.get(s) %}checked{% endif %} class="accent-accent" />
+            <span>{{ SOURCE_LABELS.get(s, s) }}</span>
+            {% if s == "linkedin_email" %}<span class="text-[11px] text-slate-500">(needs IMAP_* in .env)</span>{% endif %}
+            {% if s == "indeed" or s == "indeed_pk" %}<span class="text-[11px] text-slate-500">(public feed blocked — needs Publisher API key)</span>{% endif %}
+            {% if s == "rozee" %}<span class="text-[11px] text-slate-500">(may be blocked on VPN/datacenter IPs)</span>{% endif %}
+            {% if s == "linkedin_web" %}<span class="text-[11px] text-slate-500">(Selenium + Chrome; public guest search, no login — see .env for keywords/location)</span>{% endif %}
+            {% if s == "bayt" %}<span class="text-[11px] text-slate-500">(behind Cloudflare — usually unavailable)</span>{% endif %}
+          </label>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <label class="block text-xs uppercase tracking-wide text-slate-400 mb-2">Upwork saved-search RSS URLs</label>
+      <p class="text-[11px] text-slate-500 mb-1">One URL per line. Create a saved search on Upwork, copy its RSS link, and paste it here.</p>
+      {% if settings.upwork_feed_warnings %}
+      <div class="mb-2 text-xs bg-amber-950/40 border border-amber-700/50 text-amber-200 rounded-lg px-3 py-2 space-y-1">
+        {% for url, warn in settings.upwork_feed_warnings.items() %}
+        <div><span class="font-mono break-all">{{ url }}</span> — {{ warn }}</div>
+        {% endfor %}
+      </div>
+      {% endif %}
+      <textarea name="upwork_rss_urls" rows="4"
+        class="w-full bg-panel2 border border-edge rounded px-3 py-2 text-sm font-mono focus:outline-none focus:border-accent">{{ settings.upwork_rss_urls|join("\n") }}</textarea>
+    </div>
+
+    <div>
+      <label class="block text-xs uppercase tracking-wide text-slate-400 mb-2">Telegram notifications</label>
+      <div class="mb-2 text-sm rounded-lg px-3 py-2 border
+        {% if telegram_enabled() %}bg-emerald-950/30 border-emerald-800/50 text-emerald-200{% else %}bg-amber-950/40 border-amber-700/50 text-amber-200{% endif %}">
+        {% if telegram_enabled() %}
+          Telegram is <strong>on</strong>. Jobs scoring at or above the alert threshold trigger a message.
+        {% else %}
+          Telegram is <strong>off</strong> — set <code>TELEGRAM_BOT_TOKEN</code> and <code>TELEGRAM_CHAT_ID</code> in <code>.env</code>.
+        {% endif %}
+      </div>
+      <div class="flex items-end gap-4 flex-wrap">
+        <div>
+          <label class="block text-[11px] text-slate-500 mb-1">Alert threshold (0–10)</label>
+          <input type="number" name="alert_threshold" min="0" max="10" step="1" value="{{ settings.alert_threshold }}"
+            class="w-28 bg-panel2 border border-edge rounded px-3 py-2 text-sm focus:outline-none focus:border-accent" />
+        </div>
+        <div class="flex items-center gap-2">
+          <button type="button"
+            hx-post="/notify/test" hx-target="#notify-test-result" hx-swap="innerHTML"
+            class="text-xs px-3 py-2 rounded border border-edge hover:bg-panel2">Send test message</button>
+          <span id="notify-test-result" class="text-xs"></span>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <label class="block text-xs uppercase tracking-wide text-slate-400 mb-2">Profile text</label>
+      <p class="text-[11px] text-slate-500 mb-1">Sent to the AI when scoring &amp; drafting. Describe your skills, flagship projects, and target.</p>
+      <textarea name="profile_text" rows="12"
+        class="w-full bg-panel2 border border-edge rounded px-3 py-2 text-sm focus:outline-none focus:border-accent">{{ settings.profile_text }}</textarea>
+    </div>
+
+    <div class="flex items-center gap-3">
+      <button type="submit" class="px-4 py-2 rounded bg-accent hover:bg-blue-500 text-white text-sm font-medium">Save settings</button>
+      <a href="/" class="text-sm text-slate-400 hover:text-slate-200">Cancel</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

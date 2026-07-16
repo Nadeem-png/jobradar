@@ -1,0 +1,120 @@
+{% set sc = score_class(job.ai_score) %}
+<div class="p-5">
+  <div class="flex items-start gap-3 mb-4">
+    <div class="flex-1">
+      <div class="flex items-center gap-2 flex-wrap mb-2">
+        <span class="badge badge-source">{{ SOURCE_LABELS.get(job.source, job.source) }}</span>
+        <span class="badge badge-status status-{{ job.status }}">{{ job.status }}</span>
+        {% if job.posted_at %}<span class="text-xs text-slate-500">{{ job.posted_at|relative_time }}</span>{% endif %}
+      </div>
+      <h2 class="text-xl font-bold text-white leading-tight">{{ job.title }}</h2>
+      <p class="text-slate-400 mt-1">
+        {{ job.company or "Unknown company" }}
+        {% if job.location %}<span class="text-slate-600"> · {{ job.location }}</span>{% endif %}
+        {% if job.budget %}<span class="text-emerald-400/90"> · {{ job.budget }}</span>{% endif %}
+      </p>
+    </div>
+    <button onclick="closeDrawer()" class="text-slate-400 hover:text-white text-2xl leading-none">×</button>
+  </div>
+
+  <div class="flex items-center gap-2 mb-4">
+    <span class="score-badge score-{{ sc }}">{{ job.ai_score if job.ai_score is not none else "—" }}</span>
+    <a href="{{ job.url|safe_url }}" target="_blank" rel="noopener"
+       class="text-sm text-accent hover:underline ml-1">Open original ↗</a>
+    <button
+      hx-post="/jobs/{{ job.id }}/rescore"
+      hx-target="#drawer"
+      hx-swap="innerHTML"
+      hx-indicator="#rescore-spin"
+      class="btn-mini ml-auto">
+      <span id="rescore-spin" class="htmx-indicator inline-block animate-spin">⟳</span>
+      {{ "Re-score" if job.ai_score is not none else "Score with AI" }}
+    </button>
+  </div>
+
+  {% if rescore_error %}
+  <div class="mb-4 text-sm bg-amber-950/40 border border-amber-700/50 text-amber-200 rounded-lg px-3 py-2">
+    {{ rescore_error }}
+  </div>
+  {% endif %}
+
+  {% if job.ai_reason %}
+  <div class="mb-4 text-sm bg-panel2 border border-edge rounded-lg p-3">
+    <span class="text-slate-400">AI reason:</span> {{ job.ai_reason }}
+  </div>
+  {% endif %}
+
+  {% if job.contact_emails %}
+  <div class="mb-4 text-sm bg-panel2 border border-edge rounded-lg p-3">
+    <div class="text-xs uppercase tracking-wide text-slate-400 mb-2">Contact emails (from the listing)</div>
+    <div class="flex flex-wrap gap-2">
+      {% for email in job.contact_emails %}
+      <span class="inline-flex items-center gap-1">
+        <a href="mailto:{{ email }}?subject={{ ('Re: ' ~ job.title)|urlencode }}"
+           class="text-accent hover:underline">{{ email }}</a>
+        <button type="button" class="btn-mini !px-1.5 !py-0.5"
+                onclick="navigator.clipboard&&navigator.clipboard.writeText('{{ email }}');window.showToast&&showToast('Email copied: {{ email }}')">copy</button>
+      </span>
+      {% endfor %}
+    </div>
+    <p class="text-[11px] text-slate-500 mt-2">Opens your mail app — JobRadar never sends anything for you.</p>
+  </div>
+  {% endif %}
+
+  {% if job.tags %}
+  <div class="flex flex-wrap gap-1 mb-4">
+    {% for tag in job.tags %}<span class="badge badge-tag">{{ tag }}</span>{% endfor %}
+  </div>
+  {% endif %}
+
+  <!-- Proposal (AI-drafted when scored; auto-saves on blur). -->
+  <div class="mb-4">
+    <div class="flex items-center justify-between mb-1">
+      <label class="text-xs uppercase tracking-wide text-slate-400">Proposal</label>
+      <span id="proposal-save" class="text-xs text-slate-500"></span>
+    </div>
+    <textarea name="proposal" rows="8"
+      hx-post="/jobs/{{ job.id }}/proposal"
+      hx-trigger="blur changed"
+      hx-target="#proposal-save"
+      hx-swap="innerHTML"
+      placeholder="The AI draft appears here after scoring. You can edit it (or write your own) — it auto-saves when you click away. No key yet? Set OPENAI_API_KEY, then use Re-score."
+      class="w-full bg-panel2 border border-edge rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-accent">{{ job.ai_proposal or "" }}</textarea>
+  </div>
+
+  <!-- Description -->
+  <div class="mb-4">
+    <label class="text-xs uppercase tracking-wide text-slate-400 mb-1 block">Description</label>
+    <div class="text-sm text-slate-300 whitespace-pre-wrap bg-panel2 border border-edge rounded-lg p-3 max-h-72 overflow-y-auto">{{ job.description or "No description." }}</div>
+  </div>
+
+  <!-- Notes -->
+  <div class="mb-4">
+    <div class="flex items-center justify-between mb-1">
+      <label class="text-xs uppercase tracking-wide text-slate-400">Notes</label>
+      <span id="notes-save" class="text-xs text-slate-500"></span>
+    </div>
+    <textarea name="notes" rows="3"
+      hx-post="/jobs/{{ job.id }}/notes"
+      hx-trigger="blur changed"
+      hx-target="#notes-save"
+      hx-swap="innerHTML"
+      placeholder="Private notes…"
+      class="w-full bg-panel2 border border-edge rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-accent">{{ job.notes or "" }}</textarea>
+  </div>
+
+  <!-- Actions -->
+  <div class="flex items-center gap-2">
+    <button
+      hx-post="/jobs/{{ job.id }}/shortlist"
+      hx-target="#job-{{ job.id }}"
+      hx-swap="outerHTML"
+      class="btn-mini">★ Shortlist</button>
+    <button
+      hx-post="/jobs/{{ job.id }}/apply"
+      hx-target="#apply-result"
+      hx-swap="innerHTML"
+      class="btn-mini btn-apply ml-auto">↗ Apply (copy &amp; open)</button>
+  </div>
+  <div id="apply-result" class="mt-2 text-sm"></div>
+</div>

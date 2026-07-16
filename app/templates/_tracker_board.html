@@ -1,0 +1,16 @@
+<div id="tracker-board" class="flex gap-3 overflow-x-auto pb-4">
+  {% for col in TRACKER_COLUMNS %}
+  <div class="kanban-col shrink-0 w-72 bg-panel border border-edge rounded-xl flex flex-col max-h-[calc(100vh-9rem)]">
+    <div class="px-3 py-2.5 border-b border-edge flex items-center justify-between sticky top-0 bg-panel rounded-t-xl">
+      <span class="font-semibold text-sm capitalize status-dot status-{{ col }}">{{ col }}</span>
+      <span class="text-xs text-slate-500">{{ columns[col]|length }}</span>
+    </div>
+    <div class="kanban-list p-2 space-y-2 overflow-y-auto" data-status="{{ col }}">
+      {% for job in columns[col] %}
+        {% include "_tracker_card.html" %}
+      {% endfor %}
+    </div>
+  </div>
+  {% endfor %}
+</div>
+<script>window.initKanban && window.initKanban();</script>
