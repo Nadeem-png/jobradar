@@ -166,10 +166,11 @@ def _run_fetch_cycle_locked() -> dict:
         summary["fetched"], summary["inserted"], summary["skipped"], summary["errors"],
     )
 
-    # Phase 2: after fetching, AI-score up to 10 unscored jobs (oldest first).
+    # Phase 2: after fetching, AI-score unscored jobs (oldest first). How many
+    # per cycle comes from the "AI scoring per cycle" setting (0 = no limit).
     # Wrapped so a scoring failure never breaks the fetch cycle.
     try:
-        summary["scoring"] = ai.score_new_jobs(limit=10)
+        summary["scoring"] = ai.score_new_jobs()
     except Exception:  # noqa: BLE001
         log.exception("AI scoring phase failed")
         summary["scoring"] = {"scored": 0, "failed": 0, "error": True}

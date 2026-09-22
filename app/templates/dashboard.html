@@ -20,7 +20,7 @@
       hx-target="#job-list"
       hx-swap="innerHTML"
       hx-trigger="change, keyup delay:300ms from:input[type=search]"
-      class="bg-panel border border-edge rounded-xl p-4 space-y-5 text-sm">
+      class="bg-panel border border-edge rounded-xl p-4 space-y-5 text-sm filters-scroll scroll-slim">
 
       {% if freelance %}<input type="hidden" name="freelance" value="1" />{% endif %}
       {# Marker: tells the server this request came from the filter form, so zero
@@ -31,12 +31,14 @@
         <label class="block text-xs uppercase tracking-wide text-slate-400 mb-2">Search</label>
         <input type="search" name="q" placeholder="e.g. laravel, python, react…"
                class="w-full bg-panel2 border border-edge rounded px-3 py-2 focus:outline-none focus:border-accent" />
-        <p class="text-[11px] text-slate-500 mt-1">Whole-word match in title, tags, company &amp; description — best matches first. Use "quotes" for an exact phrase.</p>
+        <p class="text-[11px] text-slate-500 mt-1">Whole-word match in title, tags, company &amp; description, best matches first — titles rank well above passing mentions. Use "quotes" for an exact phrase and <code>-word</code> to exclude.</p>
       </div>
 
       <div>
-        <label class="block text-xs uppercase tracking-wide text-slate-400 mb-2">Sources</label>
-        <div class="space-y-1.5">
+        <label class="block text-xs uppercase tracking-wide text-slate-400 mb-2">
+          Sources <span class="text-slate-500 normal-case">({{ sources|length }})</span>
+        </label>
+        <div class="space-y-1.5 sources-scroll scroll-slim bg-panel2/40 border border-edge rounded-lg px-2.5 py-2">
           {% for s in sources %}
           <label class="flex items-center gap-2 cursor-pointer">
             <input type="checkbox" name="source" value="{{ s }}" checked

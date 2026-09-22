@@ -33,6 +33,7 @@ from .db import Base, SessionLocal, engine, ensure_database_exists, get_db
 from .fetchers import FETCHERS, SOURCE_LABELS
 from .models import STATUSES, TRACKER_COLUMNS, Job, utcnow
 from .pipeline import dedupe_hash, run_fetch_cycle
+from .search import search as search_jobs
 from .settings import all_settings, get_setting, seed_settings, set_setting
 
 load_dotenv()
@@ -521,54 +522,6 @@ def _is_freelance(job: Job) -> bool:
     return any(re.search(r"(?<!\w)" + re.escape(t), hay) for t in _FREELANCE_WORDS)
 
 
-def _search_tokens(q: str) -> list[str]:
-    """Split a search query into tokens: "quoted phrases" stay whole, everything
-    else splits on whitespace. Capped at 8 tokens to bound query cost."""
-    tokens = [
-        (m.group(1) or m.group(2)).strip()
-        for m in re.finditer(r'"([^"]+)"|(\S+)', q or "")
-    ]
-    return [t for t in tokens if t][:8]
-
-
-def _token_pattern(tok: str) -> str:
-    """Whole-word pattern for a search token, so "java" doesn't match
-    "javascript" and "laravel" only matches real Laravel mentions. Allows the
-    common suffixes (plural s/es, js, trailing version digits, .js) so
-    "api"→APIs and "python"→Python3 still hit. Multi-word (quoted) tokens
-    treat their spaces as flexible separators ("full stack" ↔ "Full-Stack").
-    Boundaries are skipped next to non-word edges so "c++"/".net" work."""
-    parts = [re.escape(p) for p in tok.split()]
-    body = r"[\s_\-/]+".join(parts)
-    start = r"(?<!\w)" if tok[:1].isalnum() else ""
-    end = r"(?:s|es|js|\d+|\.js)?(?!\w)" if tok[-1:].isalnum() else ""
-    return start + body + end
-
-
-# Field weights for search relevance: a title hit should outrank a mention
-# buried in the description; tags are curated so they rank high too.
-_SEARCH_FIELDS = (("title", 3.0), ("tags", 2.0), ("company", 1.5), ("description", 1.0))
-
-
-def _search_relevance(job: Job, pats: list[re.Pattern]) -> float | None:
-    """Relevance score when EVERY token matches somewhere (None otherwise).
-    Tokens may hit different fields; per-token score is the sum of the weights
-    of the fields it appears in."""
-    fields = (
-        (job.title or "", 3.0),
-        (" ".join(job.tags or []), 2.0),
-        (job.company or "", 1.5),
-        (job.description or "", 1.0),
-    )
-    total = 0.0
-    for pat in pats:
-        s = sum(w for text, w in fields if text and pat.search(text))
-        if not s:
-            return None
-        total += s
-    return total
-
-
 def _filtered_jobs(
     db: Session,
     *,
@@ -618,20 +571,12 @@ def _filtered_jobs(
         jobs = [j for j in jobs
                 if (req := _required_years(j)) is None or req <= max_years]
 
-    # Search: whole-word tokens over title + tags + company + description, with
-    # a relevance score so title/tag hits rank above description mentions.
+    # Search: see app/search.py. Ranks title/tag hits far above description
+    # mentions and boosts the query's head noun, so "website security" returns
+    # security roles rather than web-dev jobs that mention security in passing.
     relevance: dict[int, float] = {}
     if q:
-        tokens = _search_tokens(q)
-        if tokens:
-            pats = [re.compile(_token_pattern(t), re.I) for t in tokens]
-            kept = []
-            for j in jobs:
-                score = _search_relevance(j, pats)
-                if score is not None:
-                    relevance[j.id] = score
-                    kept.append(j)
-            jobs = kept
+        jobs, relevance = search_jobs(jobs, q)
 
     # Sort: ai_score desc NULLS LAST, then posted_at desc, then fetched_at desc.
     jobs.sort(
@@ -676,14 +621,14 @@ def _jobs_fragment(
 # --------------------------------------------------------------------------- #
 def _render_feed(request: Request, db: Session, *, freelance: bool):
     settings = all_settings(db)
-    enabled = settings.get("sources_enabled", {})
-    # Show a checkbox for every source that's enabled OR actually has jobs, so
-    # 'manual' (and any disabled-but-populated source) isn't filtered away when the
-    # sidebar submits its checked sources during HTMX live-filtering.
+    # Show a checkbox for every known source, in the same order as Settings, so a
+    # source that's currently disabled (or hasn't fetched yet) is still visible and
+    # filterable instead of silently missing from the sidebar. Every box renders
+    # checked, so listing more sources never hides jobs. Sources found in the DB
+    # without a label (legacy keys) are appended so their jobs stay filterable.
     present = {row[0] for row in db.execute(select(Job.source).distinct()).all()}
-    sources = [s for s in SOURCE_LABELS if enabled.get(s) or s in present]
-    sources += [s for s in present if s not in SOURCE_LABELS]
-    sources = sources or list(SOURCE_LABELS.keys())
+    sources = list(SOURCE_LABELS.keys())
+    sources += sorted(s for s in present if s not in SOURCE_LABELS)
 
     jobs = _filtered_jobs(
         db, sources=None, status=None, min_score=None, q=None, freelance=freelance
@@ -1069,6 +1014,11 @@ SOURCE_COLORS = {
     "arbeitnow": "#eab308",
     "themuse": "#a855f7",
     "indeed": "#2557a7",
+    "skipthedrive": "#f97316",
+    "jobgether": "#22d3ee",
+    "underdog": "#facc15",
+    "wellfound": "#f43f5e",
+    "builtin": "#38bdf8",
     "mustakbil": "#0e9f6e",
     "rozee": "#84cc16",
     "bayt": "#f472b6",
@@ -1373,6 +1323,14 @@ async def settings_save(request: Request, db: Session = Depends(get_db)):
     except (TypeError, ValueError):
         min_score = 6
     set_setting(db, "min_score", min_score)
+
+    # Blank or 0 means "no per-cycle limit"; negatives are clamped away.
+    raw_score_limit = (form.get("ai_score_limit") or "").strip()
+    try:
+        score_limit = max(0, int(raw_score_limit)) if raw_score_limit else 0
+    except (TypeError, ValueError):
+        score_limit = 0
+    set_setting(db, "ai_score_limit", score_limit)
 
     # Checkboxes only appear in the form when checked.
     checked = set(form.getlist("sources_enabled"))

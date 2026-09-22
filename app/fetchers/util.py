@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import re
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from bs4 import BeautifulSoup
 
@@ -46,6 +46,45 @@ def parse_dt(value) -> datetime | None:
             return None
 
     return None
+
+
+# "2 days ago", "3 weeks ago", "just now", "Today", "Yesterday" — how card-based
+# boards (Jobgether, Wellfound) label freshness instead of giving a timestamp.
+_REL_AGO_RE = re.compile(
+    r"(\d+)\s*(minute|min|hour|hr|day|week|month|year)s?\b", re.I
+)
+_REL_UNIT_DAYS = {
+    "minute": 1 / 1440, "min": 1 / 1440, "hour": 1 / 24, "hr": 1 / 24,
+    "day": 1.0, "week": 7.0, "month": 30.0, "year": 365.0,
+}
+
+
+def parse_relative_dt(text: str | None, *, now: datetime | None = None) -> datetime | None:
+    """Parse a relative freshness label into a naive UTC datetime.
+
+    Handles "Today" / "Just now" / "Yesterday" / "3 days ago" / "2 weeks ago".
+    Returns None when the text carries no usable age (e.g. "Featured").
+    """
+    if not text:
+        return None
+    s = text.strip().lower()
+    if not s:
+        return None
+    base = now or datetime.now(timezone.utc).replace(tzinfo=None)
+
+    if "just now" in s or "just posted" in s or s == "new" or "today" in s:
+        return base
+    if "yesterday" in s:
+        return base - timedelta(days=1)
+
+    m = _REL_AGO_RE.search(s)
+    if not m:
+        return None
+    qty = int(m.group(1))
+    days = _REL_UNIT_DAYS.get(m.group(2).lower())
+    if days is None:
+        return None
+    return base - timedelta(days=qty * days)
 
 
 def html_to_text(html: str | None) -> str:

@@ -15,9 +15,11 @@ with Docker.
 
 ## Features
 
-- **Aggregated feed** — RemoteOK, Remotive, We Work Remotely, Hacker News
-  "Who is hiring", Reddit (`r/forhire`, `r/remotejs`), Upwork saved-search RSS,
-  and LinkedIn job-alert emails (IMAP). Plus a manual **"+ Add job"** form.
+- **Aggregated feed** — RemoteOK, Remotive, We Work Remotely, SkipTheDrive,
+  Jobgether, Underdog.io, Hacker News "Who is hiring", Reddit (`r/forhire`,
+  `r/remotejs`), Upwork saved-search RSS, and LinkedIn job-alert emails (IMAP).
+  Wellfound (AngelList) is available via headless Chrome. Plus a manual
+  **"+ Add job"** form.
 - **AI fit scoring + proposal drafting** (OpenAI) — each job gets a 0–10 score, a
   one-line reason, and a ready-to-edit proposal. Low-scoring jobs collapse into a
   "Low match" section.
@@ -69,6 +71,37 @@ Open **http://127.0.0.1:8000**. On startup the app creates the database, seeds
 settings, starts the 10-minute fetch scheduler, and runs one fetch immediately in
 the background — jobs appear within a few seconds.
 
+### Sharing it with your team (same network)
+
+By default uvicorn binds to `127.0.0.1`, which is **this machine only** — nobody
+else can reach it, firewall rule or not. To let teammates in, bind to every
+interface:
+
+```bash
+uvicorn app.main:app --host 0.0.0.0 --port 8000
+```
+
+Teammates then open **http://&lt;your-LAN-IP&gt;:8000** (find it with `ipconfig` on
+Windows or `ip addr` on Linux/macOS). Two things to get right first:
+
+- **Set `JOBRADAR_ACCESS_KEY` in `.env`.** Without it the app runs open, and
+  anyone who can reach the port sees your feed, résumé and tracker. With it, every
+  page requires the key and the 30-day cookie is `httponly` + `samesite=lax`.
+  Changing the key logs everyone out.
+- **Allow the port through the firewall**, scoped to your own subnet rather than
+  the whole world (PowerShell as Administrator):
+
+  ```powershell
+  New-NetFirewallRule -DisplayName "JobRadar 8000" -Direction Inbound `
+    -Protocol TCP -LocalPort 8000 -Action Allow `
+    -Profile Private,Domain -RemoteAddress 192.168.101.0/24
+  ```
+
+Only the web app is exposed this way — the database still listens on
+`127.0.0.1`, and `/cron/fetch` refuses to run unless `CRON_SECRET` is set. Don't
+port-forward this to the internet: it's plain HTTP with a single shared key, so
+it belongs on a trusted LAN or behind a VPN / reverse proxy with TLS.
+
 ---
 
 ## Configuration
@@ -109,13 +142,37 @@ threshold, and the profile text sent to the AI.
   login wall shows a warning banner instead of crashing.
 - **LinkedIn email** — off by default; set the `IMAP_*` vars, forward alerts to the
   folder, and enable it in Settings.
+- **SkipTheDrive** — on by default. Their RSS feed redirects to the homepage, so
+  this reads the WordPress REST API (`/wp-json/wp/v2/job`) and takes the newest
+  `SKIPTHEDRIVE_MAX_JOBS` imported jobs. The employer isn't a field, so it's
+  recovered from the post slug (`<company>-<title>-<id>`).
+- **Jobgether** — on by default. One request to their server-rendered
+  `/search-offers` page yields ~50 offers with company, location, salary and
+  skill tags. Tune with `JOBGETHER_KEYWORD` / `JOBGETHER_MAX_JOBS`.
+- **Underdog.io** — on by default. Uses the public JSON API behind their startup
+  job board. Underdog anonymises employers ("our hiring partner"), so jobs have
+  no company name; salary bands and cities are included. Their API caps a page at
+  20 jobs, so `UNDERDOG_MAX_PAGES` (default 3) covers the board.
+- **Wellfound (AngelList)** — off by default; needs Chrome + `selenium`. Wellfound
+  sits behind a DataDome device check that rejects plain HTTP, so this loads the
+  homepage first (which clears the check) and then the public role search. Set
+  `WELLFOUND_ROLE` / `WELLFOUND_REMOTE`. Against their ToS — personal use only.
+- **Built In** — off by default, and honestly the weakest of the set:
+  `builtin.com/jobs*` is blocked by their Cloudflare WAF for plain HTTP *and* for
+  real Chrome (headless or not), so scraping is out. Their public GraphQL API is
+  wired up instead, but its job resolver currently fails on most pages with an
+  upstream `ats_details` error, so a cycle usually returns nothing and logs one
+  line. It will start working unchanged if Built In fixes that.
 
 ### AI scoring
 
-Each fetch cycle scores up to 10 unscored jobs (oldest first) so costs stay small;
-a job that keeps failing to score is retried a few times then set aside. Use
-**Re-score** in a job's drawer to force one immediately. Manually added jobs are
-scored on add.
+Each fetch cycle scores unscored jobs oldest-first. **Settings → AI scoring per
+cycle** caps how many; `0` (the default) means no limit, so the backlog never
+grows. Set a number if you'd rather keep cycles short — scoring is sequential and
+makes two API calls per job, so a large first run can take a while (it only
+delays the next fetch, it never overlaps one). A job that keeps failing to score
+is retried a few times then set aside. Use **Re-score** in a job's drawer to
+force one immediately. Manually added jobs are scored on add.
 
 ### Notifications
 
@@ -184,7 +241,12 @@ jobradar/
   any platform — it copies your proposal and opens the page. This is non-negotiable
   (platform ToS).
 - **Polite scraping.** One request per source per cycle, exponential backoff, and an
-  honest User-Agent that includes a contact address.
+  honest User-Agent that includes a contact address. A few sources need a small
+  bounded number of requests instead of one — Underdog.io because its API caps a
+  page at 20 jobs (`UNDERDOG_MAX_PAGES`), Wellfound because the device check needs
+  a homepage load first. Boards whose WAF rejects a non-browser User-Agent
+  (Jobgether, Built In) get a browser UA with JobRadar's name and contact
+  appended, so we stay identifiable rather than anonymous.
 - **Resilient.** Every fetcher, the scoring step, and notifications are isolated —
   one failing source or a slow API never breaks the cycle or the app.
 - **Local & private.** Everything runs on your machine (or your VPS); data lives in

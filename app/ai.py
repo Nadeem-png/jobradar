@@ -241,8 +241,13 @@ def extract_resume_profile(resume_text: str) -> dict:
     }
 
 
-def score_new_jobs(limit: int = 10) -> dict:
-    """Score up to ``limit`` unscored jobs (oldest first). Called after each fetch.
+def score_new_jobs(limit: int | None = None) -> dict:
+    """Score unscored jobs (oldest first). Called after each fetch.
+
+    ``limit`` caps how many jobs one call will score:
+      * ``None`` (default) — use the "AI scoring per cycle" setting.
+      * ``0`` — no cap: score every unscored job.
+      * a positive int — score at most that many.
 
     Each job is scored in its own try/except and committed independently so one
     failure never aborts the batch; failed jobs stay unscored and retry next cycle.
@@ -259,17 +264,28 @@ def score_new_jobs(limit: int = 10) -> dict:
     scored = failed = 0
     try:
         profile = get_setting(db, "profile_text", "") or ""
-        rows = (
-            db.execute(
-                select(Job)
-                .where(Job.ai_score.is_(None))
-                .where(Job.ai_attempts < MAX_SCORE_ATTEMPTS)
-                .order_by(Job.fetched_at.asc(), Job.id.asc())
-                .limit(limit)
-            )
-            .scalars()
-            .all()
+
+        if limit is None:
+            try:
+                limit = int(get_setting(db, "ai_score_limit", 0) or 0)
+            except (TypeError, ValueError):
+                limit = 0
+        limit = max(0, limit)
+
+        query = (
+            select(Job)
+            .where(Job.ai_score.is_(None))
+            .where(Job.ai_attempts < MAX_SCORE_ATTEMPTS)
+            .order_by(Job.fetched_at.asc(), Job.id.asc())
         )
+        if limit:
+            query = query.limit(limit)
+        rows = db.execute(query).scalars().all()
+        if rows:
+            log.info(
+                "AI scoring %d job(s)%s", len(rows),
+                "" if limit else " (no per-cycle limit)",
+            )
         for job in rows:
             try:
                 result = score_and_draft(job, profile)

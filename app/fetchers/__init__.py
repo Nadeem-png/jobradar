@@ -9,9 +9,9 @@ from __future__ import annotations
 from typing import Callable
 
 from . import (
-    arbeitnow, bayt, hn, indeed, indeed_pk, jobicy, linkedin_email,
-    linkedin_selenium, mustakbil, reddit, remoteok, remotive, rozee, themuse,
-    upwork_rss, wwr,
+    arbeitnow, bayt, builtin, hn, indeed, indeed_pk, jobgether, jobicy,
+    linkedin_email, linkedin_selenium, mustakbil, reddit, remoteok, remotive,
+    rozee, skipthedrive, themuse, underdog, upwork_rss, wellfound, wwr,
 )
 
 # source key -> fetch callable. Order here is the display order in Settings.
@@ -22,6 +22,11 @@ FETCHERS: dict[str, Callable[[], list[dict]]] = {
     jobicy.SOURCE: jobicy.fetch,
     arbeitnow.SOURCE: arbeitnow.fetch,
     themuse.SOURCE: themuse.fetch,
+    skipthedrive.SOURCE: skipthedrive.fetch,
+    jobgether.SOURCE: jobgether.fetch,
+    underdog.SOURCE: underdog.fetch,
+    wellfound.SOURCE: wellfound.fetch,
+    builtin.SOURCE: builtin.fetch,
     indeed.SOURCE: indeed.fetch,
     hn.SOURCE: hn.fetch,
     reddit.SOURCE: reddit.fetch,
@@ -43,6 +48,11 @@ SOURCE_LABELS: dict[str, str] = {
     "jobicy": "Jobicy",
     "arbeitnow": "Arbeitnow",
     "themuse": "The Muse",
+    "skipthedrive": "SkipTheDrive",
+    "jobgether": "Jobgether",
+    "underdog": "Underdog.io",
+    "wellfound": "Wellfound (AngelList)",
+    "builtin": "Built In",
     "indeed": "Indeed",
     "hn": "Hacker News",
     "reddit": "Reddit",

@@ -50,6 +50,13 @@
       </div>
 
       <div>
+        <label class="block text-xs uppercase tracking-wide text-slate-400 mb-2">AI scoring per cycle</label>
+        <p class="text-[11px] text-slate-500 mb-1">How many unscored jobs to score after each fetch. <strong>0 = no limit</strong> (score everything). A cap makes cycles finish faster but the backlog can grow.</p>
+        <input type="number" name="ai_score_limit" min="0" step="1" value="{{ settings.ai_score_limit }}"
+          class="w-28 bg-panel2 border border-edge rounded px-3 py-2 text-sm focus:outline-none focus:border-accent" />
+      </div>
+
+      <div>
         <label class="block text-xs uppercase tracking-wide text-slate-400 mb-2">Sources</label>
         <div class="space-y-1.5">
           {% for s in FETCH_SOURCES %}
@@ -62,6 +69,8 @@
             {% if s == "rozee" %}<span class="text-[11px] text-slate-500">(may be blocked on VPN/datacenter IPs)</span>{% endif %}
             {% if s == "linkedin_web" %}<span class="text-[11px] text-slate-500">(Selenium + Chrome; public guest search, no login — see .env for keywords/location)</span>{% endif %}
             {% if s == "bayt" %}<span class="text-[11px] text-slate-500">(behind Cloudflare — usually unavailable)</span>{% endif %}
+            {% if s == "wellfound" %}<span class="text-[11px] text-slate-500">(Selenium + Chrome; public role search, no login — see .env for role)</span>{% endif %}
+            {% if s == "builtin" %}<span class="text-[11px] text-slate-500">(job pages behind Cloudflare; their public API errors on most pages)</span>{% endif %}
           </label>
           {% endfor %}
         </div>

@@ -36,6 +36,10 @@ DEFAULTS: dict[str, object] = {
         "wordpress only", "shopify only", "unpaid", "equity only",
     ],
     "min_score": 6,
+    # How many unscored jobs the AI scores after each fetch cycle. 0 = no limit
+    # (score everything), which is the default now that a cycle can pull a few
+    # hundred jobs and a capped run would never catch up.
+    "ai_score_limit": 0,
     "sources_enabled": {
         "remoteok": True,
         "remotive": True,
@@ -43,6 +47,18 @@ DEFAULTS: dict[str, object] = {
         "jobicy": True,
         "arbeitnow": True,
         "themuse": True,
+        # SkipTheDrive (WordPress REST), Jobgether (server-rendered search) and
+        # Underdog.io (public JSON API) all answer over plain HTTP — on.
+        "skipthedrive": True,
+        "jobgether": True,
+        "underdog": True,
+        # Wellfound needs headless Chrome to clear its DataDome device check;
+        # off by default like the other Selenium source.
+        "wellfound": False,
+        # Built In blocks builtin.com/jobs at the Cloudflare WAF (even for real
+        # Chrome), and its public GraphQL job resolver currently errors on most
+        # pages — off by default so it doesn't log every cycle.
+        "builtin": False,
         # Indeed's public RSS is blocked (403) and needs a Publisher API key —
         # off by default so it doesn't log a failure every cycle.
         "indeed": False,

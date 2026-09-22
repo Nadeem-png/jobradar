@@ -84,3 +84,42 @@
   outline-offset: 2px;
   border-color: #4f9cf9 !important;
 }
+
+/* --- Slim dark scrollbar ------------------------------------------------
+   For panes that scroll inside the page (filter sidebar, drawer, kanban
+   columns). The OS default is a bright, chunky bar that reads as a seam on
+   these dark panels. Firefox uses scrollbar-*, WebKit/Blink the ::-webkit-*
+   pseudo-elements — both are set so it looks the same either way. */
+.scroll-slim {
+  scrollbar-width: thin;
+  scrollbar-color: #2b3547 transparent;
+}
+.scroll-slim::-webkit-scrollbar { width: 8px; height: 8px; }
+.scroll-slim::-webkit-scrollbar-track { background: transparent; }
+.scroll-slim::-webkit-scrollbar-thumb {
+  background: #2b3547;
+  border-radius: 4px;
+}
+.scroll-slim::-webkit-scrollbar-thumb:hover { background: #3a4761; }
+
+/* Sticky filter sidebar: cap it to the viewport (minus the 3.5rem header and
+   the sticky top-20 offset) so long filter lists scroll inside the panel
+   instead of running off the bottom of the screen unreachably. Desktop only —
+   on narrow screens the sidebar stacks above the feed and the page scrolls. */
+@media (min-width: 1024px) {
+  .filters-scroll {
+    max-height: calc(100vh - 6.5rem);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+}
+
+/* The source list is 20+ checkboxes and would otherwise push every filter below
+   it (country, date, employment type, score…) far down the panel. Its own scroll
+   box keeps the rest of the sidebar reachable at every window width, not just on
+   desktop where .filters-scroll applies. */
+.sources-scroll {
+  max-height: 15rem;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
